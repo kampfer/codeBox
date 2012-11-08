@@ -16,17 +16,18 @@
 			};
 			img.src = 'nolines.png';
 
-			var z = 0, a = 4, v = 0, maxV = 3, width = 320, height = 240;
+			var z = 0, a = 4, v = 0, maxV = 4, width = 320, height = 240;
 
 			function lineLoop() {
 				ctx.clearRect(0, 0, width, height);
 				ctx.drawImage(img, 0, 0);
 
-				for(var i = 0; i < 5; i++) {
-					if(v < maxV) {
-						v += a;
-					}
-					if(z < height) {
+				if(v < maxV) {
+					v += a;
+				}
+				
+				for(var i = 0; i < 50; i++) {
+					if(z < height / 2) {
 						z += v;
 					} else {
 						z = 0;
@@ -38,8 +39,8 @@
 			function drawLine(z) {
 				z = width - z;
 				ctx.save();
-				//ctx.lineWidth = 5;
-				ctx.strokeStyle = "rgba(255,165,0,0.5)";
+				ctx.lineWidth = 5;
+				ctx.strokeStyle = "rgba(255,255,255,0.5)";
 				ctx.beginPath();
 				ctx.moveTo(0, z);
 				ctx.lineTo(320, z);
