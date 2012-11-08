@@ -13,31 +13,38 @@
 			var img = new Image();
 			img.onload = function() {
 				setInterval(lineLoop, 1000 / 24);
-				//lineLoop();
 			};
 			img.src = 'nolines.png';
 
-			var z = 130, a = 0.01, v = 0, maxV = 3;
+			var z = 0, a = 4, v = 0, maxV = 3, width = 320, height = 240;
+
 			function lineLoop() {
-				ctx.clearRect(320, 240);
+				ctx.clearRect(0, 0, width, height);
 				ctx.drawImage(img, 0, 0);
 
-				v = v < maxV ? v + a : maxV;
-				z += v;
-				drawLine(z);
-
-				if(z >= 240) {
-					z = 130;
+				for(var i = 0; i < 5; i++) {
+					if(v < maxV) {
+						v += a;
+					}
+					if(z < height) {
+						z += v;
+					} else {
+						z = 0;
+					}
+					drawLine(z);
 				}
-
-				//setTimeout(lineLoop, 0);
 			}
 
 			function drawLine(z) {
+				z = width - z;
+				ctx.save();
+				//ctx.lineWidth = 5;
+				ctx.strokeStyle = "rgba(255,165,0,0.5)";
 				ctx.beginPath();
 				ctx.moveTo(0, z);
 				ctx.lineTo(320, z);
 				ctx.stroke();
+				ctx.restore();
 			}
 		</script>
 	</body>
