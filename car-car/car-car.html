@@ -10,43 +10,55 @@
 		<script type="text/javascript">
 			var ctx = document.getElementById('canvas').getContext('2d');
 
-			var img = new Image();
-			img.onload = function() {
-				setInterval(lineLoop, 1000 / 24);
-			};
-			img.src = 'nolines.png';
+			// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+			(function() {
+			    var lastTime = 0;
+			    var vendors = ['ms', 'moz', 'webkit', 'o'];
+			    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+			        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+			        window.cancelAnimationFrame = 
+			          window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+			    }
+			 
+			    if (!window.requestAnimationFrame)
+			        window.requestAnimationFrame = function(callback, element) {
+			            var currTime = new Date().getTime();
+			            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+			            var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
+			              timeToCall);
+			            lastTime = currTime + timeToCall;
+			            return id;
+			        };
+			 
+			    if (!window.cancelAnimationFrame)
+			        window.cancelAnimationFrame = function(id) {
+			            clearTimeout(id);
+			        };
+			}());
 
-			var z = 0, a = 4, v = 0, maxV = 4, width = 320, height = 240;
+			var z = 0, width = 320, height = 240;
+			requestAnimationFrame(function() {
+				// place the requestAnimFrame *before* the render() to assure as close to 
+				// 60fps with the setTimeout fallback.
+				requestAnimationFrame(arguments.callee);
 
-			function lineLoop() {
+				// clear canvas
 				ctx.clearRect(0, 0, width, height);
-				ctx.drawImage(img, 0, 0);
 
-				if(v < maxV) {
-					v += a;
-				}
-				
-				for(var i = 0; i < 50; i++) {
-					if(z < height / 2) {
-						z += v;
-					} else {
-						z = 0;
-					}
-					drawLine(z);
-				}
-			}
-
-			function drawLine(z) {
-				z = width - z;
+				// render
 				ctx.save();
-				ctx.lineWidth = 5;
-				ctx.strokeStyle = "rgba(255,255,255,0.5)";
 				ctx.beginPath();
 				ctx.moveTo(0, z);
-				ctx.lineTo(320, z);
+				ctx.lineTo(width, z);
 				ctx.stroke();
 				ctx.restore();
-			}
+
+				if(z === height) {
+					z = 0;
+				} else {
+					z++
+				}
+			});
 		</script>
 	</body>
 </html>
