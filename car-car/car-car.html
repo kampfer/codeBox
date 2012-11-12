@@ -6,42 +6,114 @@
 		<title>car-car</title>
 	</head>
 	<body>
-		<canvas id="canvas" width="320" height="240"></canvas>
+		<canvas id="canvas"></canvas>
 		<script type="text/javascript">
-			var ctx = document.getElementById('canvas').getContext('2d');
+			var canvas = document.getElementById('canvas');
+			var ctx = canvas.getContext('2d');
+
+			var COLORS = {
+				SKY:  '#72D7EE',
+				TREE: '#005108',
+				FOG:  '#005108',
+				LIGHT:  { road: '#6B6B6B', grass: '#10AA10', rumble: '#555555', lane: '#CCCCCC'  },
+				DARK:   { road: '#696969', grass: '#009A00', rumble: '#BBBBBB'                   },
+				START:  { road: 'white',   grass: 'white',   rumble: 'white'                     },
+				FINISH: { road: 'black',   grass: 'black',   rumble: 'black'                     }
+			};
+
+			var fps = 60;
+			var step = 1 / 60;
+			var dt = 0;
+			var gdt = 0;
+			var now = null;
+			var last = +new Date();
+			var z = 0;
+			var width = 640;
+			var height = 480;
+			var segments = [];
+			var segmentLength = 200;
+			var rumbleLength = 3;
+			var lanes = 3;
+			var trackLength;
 
 			// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
-			(function() {
-			    var lastTime = 0;
-			    var vendors = ['ms', 'moz', 'webkit', 'o'];
-			    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
-			        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
-			        window.cancelAnimationFrame = 
-			          window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
-			    }
-			 
-			    if (!window.requestAnimationFrame)
-			        window.requestAnimationFrame = function(callback, element) {
-			            var currTime = new Date().getTime();
-			            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-			            var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
-			              timeToCall);
-			            lastTime = currTime + timeToCall;
-			            return id;
-			        };
-			 
-			    if (!window.cancelAnimationFrame)
-			        window.cancelAnimationFrame = function(id) {
-			            clearTimeout(id);
-			        };
-			}());
+			if (!window.requestAnimationFrame) {
+				window.requestAnimationFrame = window.webkitRequestAnimationFrame || 
+					window.mozRequestAnimationFrame    || 
+					window.oRequestAnimationFrame      || 
+					window.msRequestAnimationFrame     ||
+					function(callback, element) {
+						window.setTimeout(callback, 1000 / 60);
+					}
+			}
 
-			var z = 0, width = 320, height = 240;
-			requestAnimationFrame(function() {
-				// place the requestAnimFrame *before* the render() to assure as close to 
-				// 60fps with the setTimeout fallback.
-				requestAnimationFrame(arguments.callee);
+			function polygon(ctx, x1, y1, x2, y2, x3, y3, x4, y4, color) {
+				ctx.save();
+				ctx.fillStyle = color;
+				ctx.beginPath();
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(x2, y2);
+				ctx.lineTo(x3, y3);
+				ctx.lineTo(x4, y4);
+				ctx.fill();
+				ctx.resotre();
+			}
 
+			function segment(ctx, width, lanes, x1, y1, w1, x2, y2, w2, color) {
+				ctx.save();
+				ctx.fillStyle = color.grass;
+    			ctx.fillRect(0, y2, width, y1 - y2);
+    			ctx.restore();
+			}
+
+			function project() {}
+
+			function resetRoad() {
+				segments = [];
+				//500随便填
+				for(var n = 0; n < 500; n++) {
+					segments.push({
+						index: n,
+						p1: { world: { z:  n   *segmentLength }, camera: {}, screen: {} },
+						p2: { world: { z: (n+1)*segmentLength }, camera: {}, screen: {} },
+						color: Math.floor(n/rumbleLength)%2 ? COLORS.DARK : COLORS.LIGHT
+					});
+				}
+				trackLength = segments.length * segmentLength;
+			};
+
+			function sleep(t) {
+				var s = +new Date(), n;
+				do{
+					n = +new Date();
+				} while(n - s <= t)
+			}
+
+			function frame() {
+				now = +new Date();
+				// dt:前一帧动画的耗时,单位是秒,最大值为1
+				dt  = Math.min(30/1000, (now - last) / 1000); 
+				// gdt:
+				gdt = gdt + dt;
+				while (gdt > step) {
+					gdt = gdt - step;
+					update(step);
+				}
+				render();
+				last = now;
+				requestAnimationFrame(frame);
+			}
+
+			function update() {
+				if(z === height) {
+					z = 0;
+				} else {
+					z++
+				}
+			}
+
+			function render() {
+				//sleep(1000/20);
 				// clear canvas
 				ctx.clearRect(0, 0, width, height);
 
@@ -52,13 +124,12 @@
 				ctx.lineTo(width, z);
 				ctx.stroke();
 				ctx.restore();
+			}
 
-				if(z === height) {
-					z = 0;
-				} else {
-					z++
-				}
-			});
+			canvas.width = width;
+			canvas.height = height;
+
+			frame();
 		</script>
 	</body>
 </html>
