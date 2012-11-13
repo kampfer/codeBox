@@ -35,13 +35,13 @@
 			var lanes = 3;
 			var trackLength;
 			var maxDistance = 500;
-			var drawDistance = 300;
+			var drawDistance = 500;
 			var position = 0;
 			var fieldOfView = 100;
 			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
 			var playerX = 0;
 			var playerZ;
-			var cameraHeight = 1000;
+			var cameraHeight = 2000;
 			var roadWidth = 2000;
 
 			// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
@@ -146,12 +146,20 @@
 				requestAnimationFrame(frame);
 			}
 
-			function update() {
+			function update() {}
+
+			function drawSky() {
+				ctx.save();
+				ctx.fillStyle = COLORS.SKY;
+				ctx.fillRect(0, 0, width, height);
+				ctx.restore();
 			}
 
 			function render() {
 				// clear canvas
 				ctx.clearRect(0, 0, width, height);
+
+				drawSky();
 
 				// render
 				ctx.save();
