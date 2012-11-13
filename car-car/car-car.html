@@ -27,7 +27,6 @@
 			var gdt = 0;
 			var now = null;
 			var last = +new Date();
-			var z = 0;
 			var width = 640;
 			var height = 480;
 			var segments = [];
@@ -35,6 +34,15 @@
 			var rumbleLength = 3;
 			var lanes = 3;
 			var trackLength;
+			var maxDistance = 500;
+			var drawDistance = 300;
+			var position = 0;
+			var fieldOfView = 100;
+			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
+			var playerX = 0;
+			var playerZ;
+			var cameraHeight = 1000;
+			var roadWidth = 2000;
 
 			// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 			if (!window.requestAnimationFrame) {
@@ -47,6 +55,24 @@
 					}
 			}
 
+			function project(p, cameraX, cameraY, cameraZ, cameraDepth, width, height, roadWidth) {
+				p.camera.x     = (p.world.x || 0) - cameraX;
+				p.camera.y     = (p.world.y || 0) - cameraY;
+				p.camera.z     = (p.world.z || 0) - cameraZ;
+				p.screen.scale = cameraDepth/p.camera.z;
+				p.screen.x     = Math.round((width/2)  + (p.screen.scale * p.camera.x  * width/2));
+				p.screen.y     = Math.round((height/2) - (p.screen.scale * p.camera.y  * height/2));
+				p.screen.w     = Math.round(             (p.screen.scale * roadWidth   * width/2));
+			}
+
+			function rumbleWidth(roadWidth, lanes) {
+				return roadWidth / Math.max(6, 2 * lanes);
+			}
+
+			function laneMarkerWidth(roadWidth, lanes) {
+				return roadWidth / Math.max(32, 8 * lanes);
+			}
+
 			function polygon(ctx, x1, y1, x2, y2, x3, y3, x4, y4, color) {
 				ctx.save();
 				ctx.fillStyle = color;
@@ -56,22 +82,38 @@
 				ctx.lineTo(x3, y3);
 				ctx.lineTo(x4, y4);
 				ctx.fill();
-				ctx.resotre();
+				ctx.restore();
 			}
 
 			function segment(ctx, width, lanes, x1, y1, w1, x2, y2, w2, color) {
+				var r1 = rumbleWidth(w1, lanes),
+					r2 = rumbleWidth(w2, lanes),
+					lm1 = laneMarkerWidth(w1, lanes),
+					lm2 = laneMarkerWidth(w2, lanes);
+
 				ctx.save();
+
 				ctx.fillStyle = color.grass;
     			ctx.fillRect(0, y2, width, y1 - y2);
+
+    			//right rumble
+				polygon(ctx, x1-w1-r1, y1, x1-w1, y1, x2-w2, y2, x2-w2-r2, y2, color.rumble);
+				//left rumble
+				polygon(ctx, x1+w1+r1, y1, x1+w1, y1, x2+w2, y2, x2+w2+r2, y2, color.rumble);
+				//road
+				polygon(ctx, x1-w1,    y1, x1+w1, y1, x2+w2, y2, x2-w2,    y2, color.road);
+
     			ctx.restore();
 			}
 
-			function project() {}
+			function findSegment(z) {
+				return segments[Math.floor(z/segmentLength) % segments.length];
+			}
 
 			function resetRoad() {
 				segments = [];
 				//500随便填
-				for(var n = 0; n < 500; n++) {
+				for(var n = 0; n < maxDistance; n++) {
 					segments.push({
 						index: n,
 						p1: { world: { z:  n   *segmentLength }, camera: {}, screen: {} },
@@ -105,31 +147,39 @@
 			}
 
 			function update() {
-				if(z === height) {
-					z = 0;
-				} else {
-					z++
-				}
 			}
 
 			function render() {
-				//sleep(1000/20);
 				// clear canvas
 				ctx.clearRect(0, 0, width, height);
 
 				// render
 				ctx.save();
-				ctx.beginPath();
-				ctx.moveTo(0, z);
-				ctx.lineTo(width, z);
-				ctx.stroke();
+
+				for(var i = 0; i < drawDistance; i++) {
+					var s = segments[i];
+					project(s.p1, playerX * roadWidth, cameraHeight, position, cameraDepth, width, height, roadWidth);
+					project(s.p2, playerX * roadWidth, cameraHeight, position, cameraDepth, width, height, roadWidth);
+
+					segment(ctx, width, lanes, 
+						s.p1.screen.x, 
+						s.p1.screen.y, 
+						s.p1.screen.w, 
+						s.p2.screen.x, 
+						s.p2.screen.y, 
+						s.p2.screen.w, 
+						s.color);
+				}
+
 				ctx.restore();
 			}
 
 			canvas.width = width;
 			canvas.height = height;
 
-			frame();
+			//frame();
+			resetRoad();
+			render();
 		</script>
 	</body>
 </html>
