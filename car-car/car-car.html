@@ -35,13 +35,13 @@
 			var lanes = 3;
 			var trackLength;
 			var maxDistance = 500;
-			var drawDistance = 500;
+			var drawDistance = 300;
 			var position = 0;
 			var fieldOfView = 100;
 			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
 			var playerX = 0;
 			var playerZ;
-			var cameraHeight = 2000;
+			var cameraHeight = 1000;
 			var roadWidth = 2000;
 
 			// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
@@ -112,7 +112,6 @@
 
 			function resetRoad() {
 				segments = [];
-				//500随便填
 				for(var n = 0; n < maxDistance; n++) {
 					segments.push({
 						index: n,
@@ -146,7 +145,12 @@
 				requestAnimationFrame(frame);
 			}
 
-			function update() {}
+			function update() {
+				position += 50;
+				if(position >= trackLength) {
+					position -= trackLength;
+				}
+			}
 
 			function drawSky() {
 				ctx.save();
@@ -156,18 +160,25 @@
 			}
 
 			function render() {
+				var baseSegment = findSegment(position);
+				var maxy        = height;
+
 				// clear canvas
 				ctx.clearRect(0, 0, width, height);
 
 				drawSky();
 
-				// render
-				ctx.save();
-
 				for(var i = 0; i < drawDistance; i++) {
-					var s = segments[i];
-					project(s.p1, playerX * roadWidth, cameraHeight, position, cameraDepth, width, height, roadWidth);
-					project(s.p2, playerX * roadWidth, cameraHeight, position, cameraDepth, width, height, roadWidth);
+					var s = segments[(baseSegment.index + i) % segments.length];
+					//s.looped = s.index < baseSegment.index;
+
+					project(s.p1, playerX * roadWidth, cameraHeight, position/* - (s.looped ? trackLength : 0)*/, cameraDepth, width, height, roadWidth);
+					project(s.p2, playerX * roadWidth, cameraHeight, position/* - (s.looped ? trackLength : 0)*/, cameraDepth, width, height, roadWidth);
+
+					if ( (s.p1.camera.z <= cameraDepth) || // behind us
+						(s.p2.screen.y >= maxy) ) {// clip by (already rendered) segment
+						continue;
+					}
 
 					segment(ctx, width, lanes, 
 						s.p1.screen.x, 
@@ -177,17 +188,17 @@
 						s.p2.screen.y, 
 						s.p2.screen.w, 
 						s.color);
-				}
 
-				ctx.restore();
+					//maxy = s.p2.screen.y;
+				}
 			}
 
 			canvas.width = width;
 			canvas.height = height;
 
-			//frame();
 			resetRoad();
-			render();
+			//render();
+			frame();
 		</script>
 	</body>
 </html>
