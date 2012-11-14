@@ -35,7 +35,7 @@
 			var lanes = 3;
 			var trackLength;
 			var maxDistance = 500;
-			var drawDistance = 300;
+			var drawDistance = 500;
 			var position = 0;
 			var fieldOfView = 100;
 			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
@@ -56,10 +56,12 @@
 			}
 
 			function project(p, cameraX, cameraY, cameraZ, cameraDepth, width, height, roadWidth) {
+				//点到camera相对坐标(实际)
 				p.camera.x     = (p.world.x || 0) - cameraX;
 				p.camera.y     = (p.world.y || 0) - cameraY;
 				p.camera.z     = (p.world.z || 0) - cameraZ;
 				p.screen.scale = cameraDepth/p.camera.z;
+				//点映射canvas上的坐标
 				p.screen.x     = Math.round((width/2)  + (p.screen.scale * p.camera.x  * width/2));
 				p.screen.y     = Math.round((height/2) - (p.screen.scale * p.camera.y  * height/2));
 				p.screen.w     = Math.round(             (p.screen.scale * roadWidth   * width/2));
@@ -160,7 +162,7 @@
 			}
 
 			function render() {
-				var baseSegment = findSegment(position);
+				//var baseSegment = findSegment(position);
 				var maxy        = height;
 
 				// clear canvas
@@ -168,17 +170,21 @@
 
 				drawSky();
 
+				var no = 0, done = 0;
 				for(var i = 0; i < drawDistance; i++) {
-					var s = segments[(baseSegment.index + i) % segments.length];
+					//var s = segments[(baseSegment.index + i) % segments.length];
+					var s = segments[i];
 					//s.looped = s.index < baseSegment.index;
 
 					project(s.p1, playerX * roadWidth, cameraHeight, position/* - (s.looped ? trackLength : 0)*/, cameraDepth, width, height, roadWidth);
 					project(s.p2, playerX * roadWidth, cameraHeight, position/* - (s.looped ? trackLength : 0)*/, cameraDepth, width, height, roadWidth);
 
-					if ( (s.p1.camera.z <= cameraDepth) || // behind us
+					if ( (s.p1.camera.z <= cameraDepth)/**/ || // behind us
 						(s.p2.screen.y >= maxy) ) {// clip by (already rendered) segment
+						no++;
 						continue;
 					}
+					done++;
 
 					segment(ctx, width, lanes, 
 						s.p1.screen.x, 
@@ -189,8 +195,10 @@
 						s.p2.screen.w, 
 						s.color);
 
-					//maxy = s.p2.screen.y;
+					maxy = s.p2.screen.y;
 				}
+				console.log(no);
+				console.log(done);
 			}
 
 			canvas.width = width;
