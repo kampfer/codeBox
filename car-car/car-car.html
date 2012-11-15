@@ -21,6 +21,17 @@
 				FINISH: { road: 'black',   grass: 'black',   rumble: 'black'                     }
 			};
 
+			var KEY = {
+				LEFT:  37,
+				UP:    38,
+				RIGHT: 39,
+				DOWN:  40,
+				A:     65,
+				D:     68,
+				S:     83,
+				W:     87
+			};
+
 			var fps = 60;
 			var step = 1 / 60;
 			var dt = 0;
@@ -39,10 +50,17 @@
 			var position = 0;
 			var fieldOfView = 100;
 			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
-			var playerX = 0;
-			var playerZ;
 			var cameraHeight = 1000;
 			var roadWidth = 2000;
+			var speed = 50;
+			var playerX = 0;
+			var playerY = 0;
+			var playerZ = cameraHeight * cameraDepth;
+
+			var keyLeft       = false;
+			var keyRight      = false;
+			var keyFaster     = false;
+			var keySlower     = false;
 
 			// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 			if (!window.requestAnimationFrame) {
@@ -64,6 +82,7 @@
 				//点映射canvas上的坐标
 				p.screen.x     = Math.round((width/2)  + (p.screen.scale * p.camera.x  * width/2));
 				p.screen.y     = Math.round((height/2) - (p.screen.scale * p.camera.y  * height/2));
+				//路宽的一半
 				p.screen.w     = Math.round(             (p.screen.scale * roadWidth   * width/2));
 			}
 
@@ -93,7 +112,8 @@
 				var r1 = rumbleWidth(w1, lanes),
 					r2 = rumbleWidth(w2, lanes),
 					lm1 = laneMarkerWidth(w1, lanes),
-					lm2 = laneMarkerWidth(w2, lanes);
+					lm2 = laneMarkerWidth(w2, lanes),
+					lanew1, lanew2, lanex1, lanex2, lane;
 
 				ctx.save();
 
@@ -106,6 +126,18 @@
 				polygon(ctx, x1+w1+r1, y1, x1+w1, y1, x2+w2, y2, x2+w2+r2, y2, color.rumble);
 				//road
 				polygon(ctx, x1-w1,    y1, x1+w1, y1, x2+w2, y2, x2-w2,    y2, color.road);
+
+				if (color.lane) {
+					lanew1 = w1*2/lanes;
+					lanew2 = w2*2/lanes;
+					lanex1 = x1 - w1 + lanew1;
+					lanex2 = x2 - w2 + lanew2;
+					//一排2列白线
+					for(lane = 1 ; lane < lanes ; lanex1 += lanew1, lanex2 += lanew2, lane++) {
+						polygon(ctx, lanex1 - lm1/2, y1, lanex1 + lm1/2, y1, 
+							lanex2 + lm2/2, y2, lanex2 - lm2/2, y2, color.lane);
+					}
+				}
 
     			ctx.restore();
 			}
@@ -124,6 +156,13 @@
 						color: Math.floor(n/rumbleLength)%2 ? COLORS.DARK : COLORS.LIGHT
 					});
 				}
+
+				segments[findSegment(playerZ).index + 2].color = COLORS.START;
+				segments[findSegment(playerZ).index + 3].color = COLORS.START;
+				for(var n = 0 ; n < rumbleLength ; n++) {
+					segments[segments.length-1-n].color = COLORS.FINISH;
+				}
+
 				trackLength = segments.length * segmentLength;
 			};
 
@@ -150,9 +189,11 @@
 			}
 
 			function update() {
-				position += 50;
-				if(position >= trackLength) {
-					position -= trackLength;
+				if(keyFaster) {
+					position += 50;
+					if(position >= trackLength) {
+						position -= trackLength;
+					}
 				}
 			}
 
@@ -204,16 +245,57 @@
 
 					maxy = s.p2.screen.y;
 				}
-				console.log(no);
-				console.log(done);
+				//console.log(no);
+				//console.log(done);
 			}
 
-			canvas.width = width;
-			canvas.height = height;
+			(function(imgs) {
+				var imgCount = imgs.length;
+				function loadImg() {
+					if(--imgCount === 0) {
+						canvas.width = width;
+						canvas.height = height;
 
-			resetRoad();
-			//render();
-			frame();
+						resetRoad();
+
+						frame();
+					}
+				}
+
+				for(var i = 0; i < imgs.length; i++) {
+					var img = new Image();
+					img.onload = loadImg;
+					img.src = imgs[i];
+				}
+			})(['background.png', 'sprites.png']);
+
+			window.onkeydown = function(event) {
+				switch(event.keyCode) {
+					case KEY.UP :
+						keyFaster = true;
+						break;
+					case KEY.RIGHT :
+						break;
+					case KEY.DOWN :
+						break;
+					case KEY.RIGHT :
+						break;			
+				}
+			};
+
+			window.onkeyup = function(event) {
+				switch(event.keyCode) {
+					case KEY.UP :
+						keyFaster = false;
+						break;
+					case KEY.RIGHT :
+						break;
+					case KEY.DOWN :
+						break;
+					case KEY.RIGHT :
+						break;			
+				}
+			};
 		</script>
 	</body>
 </html>
