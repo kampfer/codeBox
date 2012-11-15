@@ -35,7 +35,7 @@
 			var lanes = 3;
 			var trackLength;
 			var maxDistance = 500;
-			var drawDistance = 500;
+			var drawDistance = 300;
 			var position = 0;
 			var fieldOfView = 100;
 			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
@@ -67,10 +67,12 @@
 				p.screen.w     = Math.round(             (p.screen.scale * roadWidth   * width/2));
 			}
 
+			//约定的算法
 			function rumbleWidth(roadWidth, lanes) {
 				return roadWidth / Math.max(6, 2 * lanes);
 			}
 
+			//约定的算法
 			function laneMarkerWidth(roadWidth, lanes) {
 				return roadWidth / Math.max(32, 8 * lanes);
 			}
@@ -162,7 +164,7 @@
 			}
 
 			function render() {
-				//var baseSegment = findSegment(position);
+				var baseSegment = findSegment(position);
 				var maxy        = height;
 
 				// clear canvas
@@ -171,15 +173,20 @@
 				drawSky();
 
 				var no = 0, done = 0;
+				//这种写法能减少循环次数,但是难以实现动画循环
+				//for(var i = baseSegment.index; i < drawDistance; i++) {
+					//var s = segments[i];
 				for(var i = 0; i < drawDistance; i++) {
-					//var s = segments[(baseSegment.index + i) % segments.length];
-					var s = segments[i];
-					//s.looped = s.index < baseSegment.index;
+					var s = segments[(baseSegment.index + i) % segments.length];
+					//如果镜头已经走完一圈,那么需要将镜头z坐标减去一圈的长度
+					//这样动画才能成环，不会打断
+					s.looped = s.index < baseSegment.index;
 
-					project(s.p1, playerX * roadWidth, cameraHeight, position/* - (s.looped ? trackLength : 0)*/, cameraDepth, width, height, roadWidth);
-					project(s.p2, playerX * roadWidth, cameraHeight, position/* - (s.looped ? trackLength : 0)*/, cameraDepth, width, height, roadWidth);
+					project(s.p1, playerX * roadWidth, cameraHeight, position - (s.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
+					project(s.p2, playerX * roadWidth, cameraHeight, position - (s.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
 
-					if ( (s.p1.camera.z <= cameraDepth)/**/ || // behind us
+					if ( (s.p1.camera.z <= cameraDepth) || // behind us
+						//s.p2.screen.y是canvas中的坐标,从左上开始算
 						(s.p2.screen.y >= maxy) ) {// clip by (already rendered) segment
 						no++;
 						continue;
