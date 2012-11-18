@@ -6,7 +6,7 @@
 		<title>car-car</title>
 	</head>
 	<body>
-		<canvas id="canvas"></canvas>
+		<canvas id="canvas" style="width:640px;height:480px;"></canvas>
 		<script type="text/javascript">
 			var canvas = document.getElementById('canvas');
 			var ctx = canvas.getContext('2d');
@@ -20,6 +20,16 @@
 				START:  { road: 'white',   grass: 'white',   rumble: 'white'                     },
 				FINISH: { road: 'black',   grass: 'black',   rumble: 'black'                     }
 			};
+
+			var SPRITES = {
+				PLAYER_UPHILL_LEFT:     { x: 1383, y:  961, w:   80, h:   45 },
+				PLAYER_UPHILL_STRAIGHT: { x: 1295, y: 1018, w:   80, h:   45 },
+				PLAYER_UPHILL_RIGHT:    { x: 1385, y: 1018, w:   80, h:   45 },
+				PLAYER_LEFT:            { x:  995, y:  480, w:   80, h:   41 },
+				PLAYER_STRAIGHT:        { x: 1085, y:  480, w:   80, h:   41 },
+				PLAYER_RIGHT:           { x:  995, y:  531, w:   80, h:   41 }
+			};
+			SPRITES.SCALE = 0.3 * (1/SPRITES.PLAYER_STRAIGHT.w);
 
 			var KEY = {
 				LEFT:  37,
@@ -38,8 +48,8 @@
 			var gdt = 0;
 			var now = null;
 			var last = +new Date();
-			var width = 640;
-			var height = 480;
+			var width = 1024;
+			var height = 768;
 			var segments = [];
 			var segmentLength = 200;
 			var rumbleLength = 3;
@@ -52,10 +62,14 @@
 			var cameraDepth = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
 			var cameraHeight = 1000;
 			var roadWidth = 2000;
-			var speed = 50;
+			var speed = 0;
+			var maxSpeed = segmentLength / step;
 			var playerX = 0;
 			var playerY = 0;
 			var playerZ = cameraHeight * cameraDepth;
+			var sprites = null;
+			var decel = -maxSpeed/5;
+			var accel = maxSpeed/5;
 
 			var keyLeft       = false;
 			var keyRight      = false;
@@ -73,7 +87,7 @@
 					}
 			}
 
-			function project(p, cameraX, cameraY, cameraZ, cameraDepth, width, height, roadWidth) {
+			function project(p, cameraX, cameraY, cameraZ, cameraDepth, width, height, roadWidth) {  
 				//点到camera相对坐标(实际)
 				p.camera.x     = (p.world.x || 0) - cameraX;
 				p.camera.y     = (p.world.y || 0) - cameraY;
@@ -94,6 +108,25 @@
 			//约定的算法
 			function laneMarkerWidth(roadWidth, lanes) {
 				return roadWidth / Math.max(32, 8 * lanes);
+			}
+
+			function increase(start, increment, max) {
+				var ret = start + increment;
+				while(ret > max) {
+					ret -= max;
+				}
+				while(ret < 0) {
+					ret += max;
+				}
+				return ret;
+			}
+
+			function limit(value, min, max) {
+				return Math.max(min, Math.min(max, value));
+			}
+
+			function accelerate(v, a, t) {
+				return v + a * t;
 			}
 
 			function polygon(ctx, x1, y1, x2, y2, x3, y3, x4, y4, color) {
@@ -142,6 +175,29 @@
     			ctx.restore();
 			}
 
+			function drawSky() {
+				ctx.save();
+				ctx.fillStyle = COLORS.SKY;
+				ctx.fillRect(0, 0, width, height);
+				ctx.restore();
+			}
+
+			function drawSprite(ctx, sprites, sprite, destX, destY, scale) {
+				var destW = sprite.w * scale * width / 2 * (roadWidth / sprite.w * 0.3),
+					destH = sprite.h * scale * height / 2 * (roadWidth / sprite.w * 0.3),
+					destY = destY - destH,
+					destX = destX - destW / 2;
+				ctx.drawImage(sprites, sprite.x, sprite.y, sprite.w, sprite.h, destX, destY, destW, destH);
+			}
+
+			function drawCar() {
+				var destX = width / 2, 
+					scale = cameraDepth / playerZ,
+					//destY = height / 2 - height / 2 * cameraHeight * scale;
+					destY = height;
+				drawSprite(ctx, sprites, SPRITES.PLAYER_STRAIGHT, destX, destY, scale);
+			}
+
 			function findSegment(z) {
 				return segments[Math.floor(z/segmentLength) % segments.length];
 			}
@@ -173,6 +229,7 @@
 				} while(n - s <= t)
 			}
 
+
 			function frame() {
 				now = +new Date();
 				// dt:前一帧动画的耗时,单位是秒,最大值为1
@@ -188,20 +245,27 @@
 				requestAnimationFrame(frame);
 			}
 
-			function update() {
-				if(keyFaster) {
-					position += 50;
-					if(position >= trackLength) {
-						position -= trackLength;
-					}
-				}
-			}
+			function update(dt) {
+				position = increase(position, dt * speed, trackLength);
 
-			function drawSky() {
-				ctx.save();
-				ctx.fillStyle = COLORS.SKY;
-				ctx.fillRect(0, 0, width, height);
-				ctx.restore();
+				var dx = dt * 2 * (speed/maxSpeed);
+
+				if(keyRight) {
+					playerX += dx;
+				} else if(keyLeft) {
+					playerX -= dx;
+				}
+
+				if(keyFaster) {
+					speed = accelerate(speed, accel, dt);
+				} else if (keySlower) {
+					speed = 0;
+				} else {
+					speed = accelerate(speed, decel, dt);
+				}
+
+				playerX = limit(playerX, -2, 2);
+				speed   = limit(speed, 0, maxSpeed);
 			}
 
 			function render() {
@@ -245,16 +309,20 @@
 
 					maxy = s.p2.screen.y;
 				}
+
+				drawCar();
 				//console.log(no);
 				//console.log(done);
 			}
 
+			// load game images and then start game frame
 			(function(imgs) {
 				var imgCount = imgs.length;
 				function loadImg() {
 					if(--imgCount === 0) {
 						canvas.width = width;
 						canvas.height = height;
+						sprites = imgs[1];
 
 						resetRoad();
 
@@ -263,22 +331,27 @@
 				}
 
 				for(var i = 0; i < imgs.length; i++) {
-					var img = new Image();
-					img.onload = loadImg;
-					img.src = imgs[i];
+					var src = imgs[i];
+					imgs[i] = new Image();
+					imgs[i].onload = loadImg;
+					imgs[i].src = src;
 				}
 			})(['background.png', 'sprites.png']);
 
+			// keyboard controll
 			window.onkeydown = function(event) {
 				switch(event.keyCode) {
 					case KEY.UP :
 						keyFaster = true;
 						break;
 					case KEY.RIGHT :
+						keyRight = true;
 						break;
 					case KEY.DOWN :
+						keySlower = true;
 						break;
-					case KEY.RIGHT :
+					case KEY.LEFT :
+						keyLeft = true;
 						break;			
 				}
 			};
@@ -289,11 +362,14 @@
 						keyFaster = false;
 						break;
 					case KEY.RIGHT :
+						keyRight = false;
 						break;
 					case KEY.DOWN :
+						keySlower = false;
 						break;
-					case KEY.RIGHT :
-						break;			
+					case KEY.LEFT :
+						keyLeft = false;
+						break;		
 				}
 			};
 		</script>
