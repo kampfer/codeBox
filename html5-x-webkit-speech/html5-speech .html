@@ -1,0 +1,21 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>语音搜索</title>
+</head>
+
+<body>
+
+<script type="text/javascript">
+  function startSearch(event) {
+	  console.log(event.target.form)
+	event.target.form.submit();
+  }
+</script>
+
+<form action="http://www.google.com/search" >
+<input type="search" name="q" lang="zh-CN" x-webkit-speech x-webkit-grammar="builtin:search" onwebkitspeechchange="startSearch(event)">
+</form>
+</body>
+</html>
